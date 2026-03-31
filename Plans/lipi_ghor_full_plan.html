@@ -1,0 +1,345 @@
+
+<style>
+*{box-sizing:border-box}
+body{margin:0}
+.wrap{padding:12px 0 32px}
+.deadline-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg);margin-bottom:20px;font-size:13px;color:var(--color-text-secondary)}
+.deadline-bar strong{color:var(--color-text-primary)}
+.dl-dot{width:8px;height:8px;border-radius:50%;background:#D85A30;flex-shrink:0}
+.task{margin-bottom:20px;border:1px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden}
+.task-head{display:flex;align-items:center;gap:10px;padding:14px 18px;background:var(--color-background-secondary)}
+.tnum{font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;flex-shrink:0}
+.ttitle{font-size:15px;font-weight:500;color:var(--color-text-primary);flex:1}
+.tbadge{font-size:11px;padding:3px 10px;border-radius:12px;border:1px solid var(--color-border-tertiary);color:var(--color-text-secondary);flex-shrink:0}
+.task-body{padding:18px}
+.goal{background:var(--color-background-secondary);border-left:3px solid;border-radius:0 8px 8px 0;padding:12px 16px;font-size:13px;color:var(--color-text-secondary);line-height:1.7;margin-bottom:18px}
+.sec{font-size:11px;font-weight:500;color:var(--color-text-tertiary);letter-spacing:.06em;text-transform:uppercase;margin:0 0 10px}
+.steps{display:flex;flex-direction:column;gap:0}
+.step{display:flex;gap:0;border-left:2px solid var(--color-border-tertiary);margin-left:8px}
+.step:last-child{border-left:2px solid transparent}
+.step-left{display:flex;flex-direction:column;align-items:center;margin-left:-9px;margin-right:14px;flex-shrink:0}
+.step-circle{width:16px;height:16px;border-radius:50%;border:2px solid var(--color-background-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.step-inner{width:8px;height:8px;border-radius:50%}
+.step-content{padding:0 0 20px 0;flex:1}
+.step-title{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px}
+.step-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.65}
+.step-note{font-size:11px;color:var(--color-text-tertiary);margin-top:5px;padding:5px 10px;background:var(--color-background-secondary);border-radius:6px;line-height:1.5}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:16px;padding-top:16px;border-top:1px solid var(--color-border-tertiary)}
+.tag{font-size:11px;padding:2px 9px;border-radius:12px}
+.deliverables{margin-top:12px;padding:12px 14px;border-radius:8px;background:var(--color-background-secondary)}
+.deliverables .sec{margin-bottom:6px}
+.del-item{font-size:12px;color:var(--color-text-secondary);line-height:1.6;display:flex;gap:8px;margin-bottom:3px}
+.del-item::before{content:"→";color:var(--color-text-tertiary);flex-shrink:0}
+
+/* per-task palette */
+.p1 .tnum,.p1 .tag{background:#EEEDFE;color:#3C3489} .p1 .goal{border-color:#7F77DD} .p1 .step-inner{background:#7F77DD}
+.p2 .tnum,.p2 .tag{background:#E1F5EE;color:#085041} .p2 .goal{border-color:#1D9E75} .p2 .step-inner{background:#1D9E75}
+.p3 .tnum,.p3 .tag{background:#FAEEDA;color:#633806} .p3 .goal{border-color:#BA7517} .p3 .step-inner{background:#BA7517}
+.p4 .tnum,.p4 .tag{background:#E6F1FB;color:#0C447C} .p4 .goal{border-color:#378ADD} .p4 .step-inner{background:#378ADD}
+.p5 .tnum,.p5 .tag{background:#FAECE7;color:#712B13} .p5 .goal{border-color:#D85A30} .p5 .step-inner{background:#D85A30}
+.p6 .tnum,.p6 .tag{background:#EAF3DE;color:#27500A} .p6 .goal{border-color:#639922} .p6 .step-inner{background:#639922}
+.p7 .tnum,.p7 .tag{background:#FBEAF0;color:#72243E} .p7 .goal{border-color:#D4537E} .p7 .step-inner{background:#D4537E}
+</style>
+
+<div class="wrap">
+<div class="deadline-bar"><div class="dl-dot"></div><strong>ARR May deadline: May 25, 2026</strong> — ~55 days. Critical path: T1 → T2 → T3+T4 → T6 → T7. T5 overlaps with T3.</div>
+
+<div id="root"></div>
+</div>
+
+<script>
+const data = [
+{
+  num:"T1", pal:"p1", title:"Dataset finalization & HuggingFace release", status:"In progress",
+  goal:"Lock the dataset in a clean, versioned, reproducible state before any experiments run. EMNLP reviewers WILL check the HuggingFace repo — the dataset card and metadata must be publication-ready. Any inconsistency (file count mismatch, missing metadata fields, wrong splits) discovered mid-writing will derail the timeline.",
+  steps:[
+    {
+      t:"Reconcile all file counts",
+      d:"For every video ID in the dataset, verify that the number of audio chunks, transcript JSON entries, and metadata rows are identical. A mismatch means a failed upload or a chunking bug. Write a one-shot Python script that loads the HuggingFace Parquet manifest and walks the audio shard, printing any video IDs with count mismatches.",
+      note:"Use datasets.load_dataset with streaming=True so you don't need to download everything locally. Log mismatches to a CSV."
+    },
+    {
+      t:"Normalise categories to 18 canonical labels",
+      d:"Map the 32 raw YouTube category strings to the 18 canonical labels. Build a deterministic mapping dict in Python (raw → canonical). Apply it to the 'category' column in the Parquet manifest. Push in one batched HuggingFace commit so the diff is clean and reviewable.",
+      note:"Categories are a key diversity claim in the paper. If the mapping is ambiguous for some entries (e.g. 'Education' vs 'Science & Technology'), resolve them now and document the decision in the dataset card."
+    },
+    {
+      t:"Enrich metadata via YouTube Data API",
+      d:"For each of the 1,340 video IDs, fetch: channelTitle, viewCount, likeCount, publishedAt, videoDuration (ISO 8601), defaultAudioLanguage. Use batch requests (up to 50 IDs per call). Store as new columns in the Parquet manifest. Handle quota limits with exponential backoff.",
+      note:"YouTube Data API v3 quota is 10,000 units/day. A videos.list call costs 1 unit per request, 50 videos per request = 27 requests for all 1,340 videos. Well within quota."
+    },
+    {
+      t:"Define & commit train/val/test splits",
+      d:"Split by video ID (never by clip ID) to prevent data leakage. Suggested ratio: 80/10/10 by hours. Stratify by category so each split has representative coverage. Store split assignment as a column in the Parquet manifest. Add a 'split' field to each audio shard too.",
+      note:"Do NOT split randomly by clip — clips from the same video share speaker and acoustic conditions, so clip-level splits leak. This is a common mistake reviewers will check for."
+    },
+    {
+      t:"Write the dataset card (README.md)",
+      d:"Sections required: Dataset summary, Collection methodology (yt-dlp + JSON3 captions + pyannote diarisation + 3-state buffer chunking), Supported tasks, Languages (bn), Category distribution table, Speaker diversity note (596 channels, estimated N speakers), Known limitations (YouTube domain only, label noise from auto-captions), Licence (CC-BY 4.0 or similar), Citation BibTeX.",
+      note:"EMNLP has a reproducibility checklist. A complete dataset card satisfies most of it for dataset papers."
+    },
+    {
+      t:"Tag a v1.0 release on HuggingFace",
+      d:"After all the above is done, create a git tag v1.0 on the HuggingFace repo. This is the version cited in the paper. All experiments in T2–T4 must use this exact version. Record the commit hash in the paper's Experimental Setup section."
+    }
+  ],
+  deliverables:["Clean Parquet manifest (all columns, no mismatches)", "18-category normalised metadata", "train/val/test split columns", "Dataset card README.md", "HuggingFace v1.0 tag + commit hash"],
+  tags:["HuggingFace datasets","YouTube Data API v3","Parquet","Python","yt-dlp"]
+},
+{
+  num:"T2", pal:"p2", title:"Baseline ASR experiments", status:"Needed next",
+  goal:"Establish strong, reproducible baselines on the Lipi-Ghor test split. The paper needs at least one zero-shot pre-trained baseline and one fine-tuned baseline to make the evaluation section meaningful and to show where current models fail on long Bengali audio.",
+  steps:[
+    {
+      t:"Zero-shot inference: Whisper-medium (bengaliAI tuned)",
+      d:"Run inference on the T1 test split using bengaliAI/tugstugi_bengaliai-asr_whisper-medium via the HuggingFace pipeline. Use the sliding-window long-form pipeline (20s window, 2s overlap, already built). Compute chunk-level WER and feed outputs to T3 for long-form WER.",
+      note:"Kaggle T4×2 environment. Batch size 8–16 per chunk. Expected inference time ~2–3 hours for the full test split."
+    },
+    {
+      t:"Zero-shot inference: hishab Conformer-CTC",
+      d:"Run hishab/titu_stt_bn_conformer_large via NeMo. Use the existing long-form sliding-window inference script. Same 20s/2s window config. Log WER per video, then aggregate.",
+      note:"This is the model you already fine-tuned (34.84% val WER). Run the pre-trained checkpoint too as a separate zero-shot baseline — shows the gap that fine-tuning closes."
+    },
+    {
+      t:"Fine-tune Conformer-CTC on Lipi-Ghor train split",
+      d:"Re-use the NeMo fine-tuning pipeline. Data prep: generate manifest JSONs from the train split Parquet (audio_path, duration, text). Training config: lr=1e-4 (not higher — you already know high LR causes collapse), 20 epochs, early stopping on val WER. Log per-epoch WER to a CSV.",
+      note:"Target: get below 30% WER on validation. If val WER plateaus above 35%, check data quality — it's likely a category-level issue (news vs. conversational)."
+    },
+    {
+      t:"Optional: zero-shot MMS or SeamlessM4T",
+      d:"Run facebook/mms-300m or facebook/seamless-m4t-v2-large as reference zero-shot models. These are multilingual and not Bengali-specific — their high WER contextualises why domain-specific fine-tuning and a dedicated dataset like Lipi-Ghor matter.",
+      note:"This is good for the intro framing: 'Even state-of-the-art multilingual models achieve WER of X% on our test set, highlighting the need for...'."
+    },
+    {
+      t:"Compile results table",
+      d:"Table columns: Model | Training data | Chunk-level WER | Long-form WER (from T3) | Params. Rows: each baseline + fine-tuned model. This table is the centrepiece of the Experiments section.",
+      note:"Keep chunk-level WER and long-form WER as separate columns — the gap between them is itself a finding."
+    }
+  ],
+  deliverables:["Inference scripts for all baselines (reproducible)", "Per-video WER CSVs for each model", "Final results table (model × WER metric)"],
+  tags:["NeMo","Whisper","HuggingFace pipeline","Kaggle T4×2","WER","Bengali ASR"]
+},
+{
+  num:"T3", pal:"p3", title:"Long-form evaluation pipeline", status:"Core novelty",
+  goal:"This is the primary methodological contribution. Instead of evaluating ASR on isolated 12–20s chunks (which hides long-range degradation), reconstruct the full predicted transcript for each test video and align it against the original YouTube captions. Report WER at the video level. This is the right way to benchmark ASR for real-world use cases and no prior Bengali ASR paper does it.",
+  steps:[
+    {
+      t:"Build the transcript reconstructor",
+      d:"For each test video: collect all chunk-level ASR outputs in timestamp order → concatenate into a single string. Store as {video_id: predicted_text}. This is straightforward but needs careful handling of overlapping windows (the 2s overlap produces duplicate tokens at boundaries — deduplicate by taking the earlier chunk's text for the overlap region).",
+      note:"Boundary deduplication: for 20s window with 2s overlap, the last 2s of chunk N and first 2s of chunk N+1 overlap. Trust chunk N for this region, discard chunk N+1's first 2s output."
+    },
+    {
+      t:"Load & normalise YouTube JSON3 reference transcripts",
+      d:"Load the original JSON3 captions for each test video (already part of your pipeline). Concatenate caption segments in order → full reference text. Normalise both predicted and reference: (1) Unicode NFC, (2) strip punctuation, (3) strip extra whitespace, (4) Bengali-specific: normalise nukta variants (য→য়, ড→ড় mid-word regex already built), (5) convert numerals to Bengali words if inconsistent.",
+      note:"The normalisation must be identical for predicted and reference — any asymmetry will artificially inflate or deflate WER. Unit test this on 3–5 known examples."
+    },
+    {
+      t:"Compute long-form WER",
+      d:"Use jiwer or a custom implementation. WER = (S + D + I) / N where N = number of words in reference. Compute per video, then macro-average across test set. Also report median WER (less sensitive to outlier long videos).",
+      note:"Do NOT micro-average (total errors / total words) — this weights long videos more. Report both and explain the choice in the paper."
+    },
+    {
+      t:"Handle failure cases explicitly",
+      d:"Some videos will have very high WER (>80%) due to: heavy dialect, background music, multi-speaker overlap, or poor auto-caption quality as reference. Document these as noise cases. Filter them out for the main table? No — keep them in and report separately as a 'hard subset'. Reviewers will ask about this.",
+      note:"Flag videos where reference transcript has >20% [inaudible] or [music] tokens — these are unreliable references and should be noted."
+    },
+    {
+      t:"Release evaluation script",
+      d:"Package the full pipeline (reconstructor + normaliser + WER computation) as a standalone Python script with a CLI. It should take: --predictions_dir, --references_dir, --output_csv and produce per-video WER + aggregate stats. Put this in the paper's GitHub repo.",
+      note:"EMNLP 2026 has a reproducibility emphasis. A released eval script that others can run on their own models turns a dataset paper into a benchmark paper — much stronger contribution."
+    }
+  ],
+  deliverables:["Transcript reconstruction script", "Normalisation module (with nukta corrections)", "Long-form WER computation script (CLI)", "Per-video WER CSV for each model", "Public GitHub repo with eval code"],
+  tags:["WER","jiwer","Unicode NFC","Bengali normalisation","Benchmark","Python CLI"]
+},
+{
+  num:"T4", pal:"p4", title:"Per-duration-bin analysis", status:"Novel contribution",
+  goal:"Quantify how ASR performance degrades as video length increases. This is a clean, novel finding for Bengali ASR and gives the paper a second concrete empirical contribution beyond the dataset itself. The hypothesis: longer videos = more speaker changes, domain shifts, and audio quality variance → higher WER.",
+  steps:[
+    {
+      t:"Define duration bins",
+      d:"Bin test videos by total duration: 0–5 min, 5–15 min, 15–30 min, 30–60 min, 60+ min. Adjust bins if any has fewer than 10 videos — merge sparse bins. Report the number of videos and total hours in each bin in the paper.",
+      note:"If the test split is ~88 hours across ~134 videos, expected distribution: 0–5 min (~30 vids), 5–15 min (~40 vids), 15–30 min (~30 vids), 30+ min (~34 vids). Adjust if actual counts differ."
+    },
+    {
+      t:"Compute long-form WER per bin",
+      d:"From the per-video WER CSV produced in T3, group by duration bin. Compute mean and standard deviation of WER per bin per model. Run this for all baselines (T2) to see if the degradation pattern is model-dependent.",
+      note:"If Whisper degrades faster than Conformer across duration bins, that's an additional finding worth a sentence in the discussion."
+    },
+    {
+      t:"Plot WER vs duration bin",
+      d:"Bar chart: x-axis = duration bins, y-axis = WER (%), bars grouped by model. Add error bars (±1 std dev). Use matplotlib with Bengali-compatible font (Nirmala UI or Kalpurush) for any Bengali labels. Export as PDF + PNG at 300 DPI.",
+      note:"This figure goes directly in the paper. Make it clean: no gridlines on y, spine only on left+bottom, colour-blind-safe palette."
+    },
+    {
+      t:"Statistical significance testing",
+      d:"Bootstrap resampling (N=1000) to test whether adjacent bin WERs are significantly different (p < 0.05). If sample size per bin is small (<15 videos), note this as a limitation.",
+      note:"Even if not all adjacent bins are significant, the overall trend (WER increases with duration) is the claim — a simple linear regression R² on bin midpoint vs WER is intuitive to add."
+    },
+    {
+      t:"Write the analysis narrative",
+      d:"The paper section should: (1) state the hypothesis, (2) show the plot, (3) give the WER numbers per bin in a table, (4) discuss why — attribute to: sliding-window boundary artefacts accumulating, speaker change frequency, topic shift, audio quality degradation over time. (5) Suggest future work: adaptive window sizing, speaker-diarisation-aware chunking.",
+      note:"Keep this section to ~0.5 pages in the paper. It's a supporting finding, not the main contribution."
+    }
+  ],
+  deliverables:["Duration-bin WER table (per model)", "WER vs duration plot (PDF+PNG 300 DPI)", "Bootstrap significance test results", "Paper subsection draft (~300 words)"],
+  tags:["matplotlib","Bootstrap resampling","Error bars","Bengali fonts","Analysis"]
+},
+{
+  num:"T5", pal:"p5", title:"Dataset analysis & diversity section", status:"Parallel with T3",
+  goal:"Prove to reviewers that Lipi-Ghor is diverse, not just large. Scale alone (882h) is not a sufficient contribution at EMNLP. You need to show the dataset captures meaningful variation in speakers, topics, domains, and audio conditions — and that this diversity is quantifiable.",
+  steps:[
+    {
+      t:"Category distribution analysis",
+      d:"From the normalised metadata (T1), compute video count and total hours per canonical category. Plot as a horizontal bar chart sorted by hours. Identify and honestly discuss any category imbalance (e.g. if News dominates). Add this to the dataset card and the paper.",
+      note:"If one category has >30% of hours, acknowledge it in the limitations. Reviewers will spot it in the chart."
+    },
+    {
+      t:"Speaker & channel diversity",
+      d:"Count unique channels (596 confirmed). Estimate unique speakers: assume ~1–2 primary speakers per channel → ~600–1,200 unique speakers. If gender metadata is available from channel descriptions, report M/F/unknown distribution. Flag that speaker identity labels are not provided (privacy).",
+      note:"'Unique channels' is a proxy for speaker diversity in the absence of diarisation labels. This is acceptable — state it clearly."
+    },
+    {
+      t:"Audio quality analysis",
+      d:"Compute signal-to-noise ratio proxy for a sample of videos per category. Use a lightweight tool: WADA-SNR (Python package) or torchaudio's signal power approach. Report mean SNR per category. Flag that indoor studio recordings (news, education) will score higher than outdoor or music-heavy content.",
+      note:"This doesn't need to be exhaustive — a 10% random sample per category is enough for a summary table."
+    },
+    {
+      t:"Transcript & vocabulary analysis",
+      d:"Compute: average words per segment, vocabulary size (unique word types), type-token ratio (TTR), OOV rate against a standard Bengali wordlist (e.g. from IndicNLP). These metrics show lexical richness. Also: average segment duration distribution (histogram).",
+      note:"High TTR and large vocabulary = lexically diverse corpus = strong claim. If TTR is low (repetitive content), acknowledge it."
+    },
+    {
+      t:"Comparison with prior Bengali ASR datasets",
+      d:"Build a comparison table: Dataset | Hours | Speakers | Domains | Licence | Public. Include: OpenSLR (Bengali), MACSASR, SHRUTI, Studio89, any others from literature. Lipi-Ghor's 882h should be the largest public Bengali ASR dataset — verify this claim against current HuggingFace listings.",
+      note:"This comparison table is critical. It goes in the Introduction AND the Dataset section. It's the clearest way to position the contribution."
+    }
+  ],
+  deliverables:["Category distribution chart (PDF+PNG)", "Comparison table vs prior datasets", "Audio quality summary table", "Vocabulary stats (TTR, OOV rate, vocab size)", "Dataset section draft (~1.5 pages)"],
+  tags:["IndicNLP","WADA-SNR","torchaudio","matplotlib","Bengali NLP","Dataset comparison"]
+},
+{
+  num:"T6", pal:"p6", title:"Paper writing", status:"Start now, parallel",
+  goal:"Write a tight, reviewer-proof EMNLP long paper (8 pages + references). The paper must do two things: (1) convince reviewers Lipi-Ghor fills a real gap in Bengali ASR resources, and (2) show that long-form evaluation is the correct benchmark paradigm. These are two separate arguments that need separate evidence.",
+  steps:[
+    {
+      t:"Abstract (write first, revise last)",
+      d:"~150 words. Lead with the problem (Bengali ASR resource scarcity). Introduce Lipi-Ghor: 882 hours, 1,340 videos, 596 channels, 18 domains. Name the evaluation innovation (long-form video reconstruction vs chunk-level WER). State best WER achieved (fill in after T2). End with availability statement.",
+      note:"Write a draft now even without final numbers — placeholder [XX%] is fine. The abstract frames everything else."
+    },
+    {
+      t:"Introduction (1–1.5 pages)",
+      d:"Para 1: Bengali speaker population (230M+), ASR deployment gap. Para 2: existing Bengali ASR datasets — size, domain, access constraints (use the comparison table from T5). Para 3: why chunk-level WER is insufficient — it doesn't capture real-world long-form degradation. Para 4: contributions bulleted — (1) dataset, (2) evaluation methodology, (3) baselines. Para 5: paper structure.",
+      note:"The framing in para 3 is the hardest and most important. Practice articulating it in one sentence: 'Chunk-level WER cannot detect performance degradation from context loss, speaker change, or topic shift that accumulates over long videos.'"
+    },
+    {
+      t:"Related work (0.75–1 page) — Nishat leads",
+      d:"Three sub-sections: (1) Bengali ASR resources and systems, (2) Long-form ASR evaluation (cite prior work on meeting/podcast ASR), (3) Dataset papers in low-resource NLP (cite CommonVoice, FLEURS, MLS for methodology). Nishat should handle citations from ASR literature — she has broader access.",
+      note:"Do not over-cite your own prior work in the anonymised submission. Keep self-citations to the minimum needed."
+    },
+    {
+      t:"Dataset section (1.5–2 pages)",
+      d:"Subsections: Collection pipeline (yt-dlp, JSON3, language filter), Segmentation (3-state buffer chunking algorithm — describe the 3 states explicitly), Quality filtering, Metadata enrichment, Dataset statistics (all analysis from T5 goes here — charts, tables). End with comparison table vs prior datasets.",
+      note:"The 3-state buffer algorithm is novel enough to merit a small diagram or pseudocode block. If reviewers don't understand how you chunked, they'll assume it's naive sliding-window."
+    },
+    {
+      t:"Evaluation methodology section (1 page) — this is the core",
+      d:"Subsection 1: Limitations of chunk-level WER (with a motivating example — take a real video where chunk WER looks fine but long-form WER is bad). Subsection 2: Long-form reconstruction pipeline (T3). Subsection 3: Per-duration-bin analysis rationale (T4). This section should feel like you're proposing a new evaluation standard, not just reporting numbers.",
+      note:"This is what separates the paper from a standard dataset paper. Write it first among all sections after the abstract — it defines the framing for experiments."
+    },
+    {
+      t:"Experiments section (1.5 pages)",
+      d:"Subsection 1: Experimental setup (hardware, software versions, HuggingFace dataset version commit hash). Subsection 2: Results table (model × chunk-WER × long-form-WER). Subsection 3: Duration-bin analysis (the plot + numbers from T4). Subsection 4: Error analysis — qualitative examples of where models fail (dialect, OOV Bengali words, code-switching).",
+      note:"Include at least 3–4 qualitative error examples with the Bengali text. Reviewers appreciate this — it grounds the numbers."
+    },
+    {
+      t:"Conclusion + Limitations + Ethics (0.5 pages)",
+      d:"Conclusion: restate 3 contributions in 3 sentences. Limitations: YouTube domain only, auto-caption label noise, no speaker identity labels, category imbalance. Ethics: public YouTube data, no PII, dataset licence. EMNLP requires a Limitations section — do not skip.",
+      note:"The Limitations section is mandatory at EMNLP 2026 and reviewed. Being honest about YouTube domain bias and caption noise is better than having reviewers discover it."
+    },
+    {
+      t:"Team coordination & review",
+      d:"Suggested ownership: Sanjid — dataset, eval methodology, experiments. Nishat — related work, introduction framing, senior review. Risalat + Fuad — experiment runs, result table verification. Bayazid — Bengali text examples, proofreading. Target: full draft ready by May 10 to allow 15 days of revision before May 25 deadline.",
+      note:"Use Overleaf with shared editing. Lock the results table after May 15 — no new experiments after that or you won't have time to update all the text."
+    }
+  ],
+  deliverables:["Full paper draft on Overleaf (ACL/EMNLP LaTeX template)", "All figures as PDF+PNG", "Appendix with full results tables", "Limitations + Ethics sections complete"],
+  tags:["Overleaf","LaTeX","ACL template","EMNLP","Bengali NLP","Co-authoring"]
+},
+{
+  num:"T7", pal:"p7", title:"ARR May submission", status:"Deadline: May 25",
+  goal:"Submit a clean, anonymised, checklist-complete paper to ACL Rolling Review (ARR) May 2026 on time. Late submissions are not accepted. ARR reviews take ~6 weeks, after which you commit the paper to a venue (EMNLP 2026 main or findings).",
+  steps:[
+    {
+      t:"Use the correct template",
+      d:"ACL Rolling Review uses the ACL 2023 LaTeX template (acl_natbib style). Download from aclrollingreview.org. Long papers: 8 pages of content + unlimited references. Do NOT use the EMNLP template directly — submit to ARR first.",
+      note:"Check the ARR May 2026 call for papers for any template updates. Template versions matter — an outdated template can cause desk rejection."
+    },
+    {
+      t:"Anonymise the submission",
+      d:"Remove all author names and affiliations. Replace self-citations with 'Anonymous (year)'. Remove any GitHub links that reveal identity. Remove acknowledgements. Check the PDF metadata (title field, author field in LaTeX \\pdfinfo) — these leak identity.",
+      note:"Common leak: GitHub repo URL in the paper that has your name on it. Either use an anonymous GitHub (e.g. anonymous.4open.science) or describe the repo without linking."
+    },
+    {
+      t:"Complete the ARR responsible research checklist",
+      d:"ARR has a mandatory checklist. Key items for a dataset paper: (1) IRB/ethics — YouTube public data, no PII collected. (2) Dataset licence — state CC-BY or similar. (3) Limitations section present. (4) Reproducibility — code and data are released (HuggingFace + GitHub). (5) Compute resources stated in experiments.",
+      note:"The checklist is reviewed. Missing items trigger a desk-level request for revision before the paper goes to reviewers, which wastes days."
+    },
+    {
+      t:"Submit to OpenReview (ARR portal)",
+      d:"Create an account at openreview.net if not already done. Submit at least 24 hours before the May 25 deadline — the system gets slow near the deadline. Upload: main PDF, optional appendix PDF, anonymised dataset card. Fill in all metadata: title, abstract, keywords (speech processing, low-resource NLP, Bengali, dataset).",
+      note:"Keywords affect which reviewers get assigned. Include 'ASR', 'low-resource', 'Bengali', 'dataset', 'evaluation' to attract reviewers with relevant expertise."
+    },
+    {
+      t:"Prepare for reviews (anticipate reviewer questions)",
+      d:"Most likely critiques: (1) 'Auto-captions are noisy — how does this affect the dataset quality?' → answer: WER of the reference captions themselves, estimated from a human-verified sample. (2) 'Why not compare to CommonVoice Bengali?' → answer: CommonVoice Bengali is read speech, Lipi-Ghor is spontaneous/natural. (3) 'Long-form eval is just sliding-window — what's novel?' → answer: full video reconstruction + alignment + per-duration analysis is the contribution, not the sliding window itself.",
+      note:"Write a 1-page internal author FAQ before submission. It forces you to strengthen the paper and prepares Nishat+team for the author response phase."
+    },
+    {
+      t:"Venue commitment (post-review)",
+      d:"After receiving ARR reviews (~early July), decide: commit to EMNLP 2026 main conference or EMNLP Findings. Main = higher visibility. Findings = higher acceptance rate. Decision deadline is typically ~2 weeks after reviews arrive.",
+      note:"If reviews are mixed but positive, Findings is the safe option. If reviews are strong, push for main. Nishat's experience as a PhD candidate will be valuable here."
+    }
+  ],
+  deliverables:["Anonymised submission PDF", "ARR checklist filled", "OpenReview submission confirmation", "Author FAQ document (internal)"],
+  tags:["ARR","OpenReview","EMNLP 2026","Anonymisation","ACL template","May 25"]
+}
+];
+
+const root = document.getElementById('root');
+data.forEach(task => {
+  const div = document.createElement('div');
+  div.className = `task ${task.pal}`;
+  div.innerHTML = `
+    <div class="task-head">
+      <span class="tnum">${task.num}</span>
+      <span class="ttitle">${task.title}</span>
+      <span class="tbadge">${task.status}</span>
+    </div>
+    <div class="task-body">
+      <div class="goal">${task.goal}</div>
+      <div class="sec">Step-by-step execution</div>
+      <div class="steps">
+        ${task.steps.map((s,i) => `
+          <div class="step">
+            <div class="step-left">
+              <div class="step-circle"><div class="step-inner"></div></div>
+            </div>
+            <div class="step-content">
+              <div class="step-title">${i+1}. ${s.t}</div>
+              <div class="step-desc">${s.d}</div>
+              ${s.note ? `<div class="step-note">⚑ ${s.note}</div>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="deliverables">
+        <div class="sec">Deliverables</div>
+        ${task.deliverables.map(d => `<div class="del-item">${d}</div>`).join('')}
+      </div>
+      <div class="tags">${task.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+    </div>
+  `;
+  root.appendChild(div);
+});
+</script>
