@@ -285,7 +285,7 @@ wer,cer,insertions,deletions,substitutions,hits
 
 ---
 
-### Task 2.2: Meta MMS 1B Inference
+### Task 2.2: Meta MMS 1B Inference [Done]
 
 **What:** Run Meta's Massively Multilingual Speech model
 
@@ -368,7 +368,7 @@ print(model.config.adapter_attn_dim)  # check if 'ben' is available
 
 ---
 
-### Task 2.3: SeamlessM4T v2 Inference
+### Task 2.3: SeamlessM4T v2 Inference [Done]
 
 **What:** Run Meta's speech-to-text model
 
@@ -435,7 +435,7 @@ metrics.to_csv('seamless_metrics.csv', index=False)
 
 ---
 
-### Task 2.4: IndicWhisper Inference
+### Task 2.4: IndicWhisper Inference [done]
 
 **What:** Run AI4Bharat's Indic-language fine-tuned Whisper
 
